@@ -45,11 +45,6 @@ nano .env  # atau buka dengan text editor
 Edit file `.env` dengan nilai yang sesuai:
 
 ```env
-TELEGRAM_BOT_TOKEN=6234234923:ABCD1234567890...
-TELEGRAM_CHANNEL_ID=@galaksi_aksara_channel
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=phi
-DAILY_POST_TIME=09:00
 ```
 
 ---
