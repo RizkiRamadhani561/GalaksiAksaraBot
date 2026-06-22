@@ -2,6 +2,8 @@
 .env
 .env.local
 .env.*.local
+.envrc
+.secrets/
 
 # Database
 *.db
@@ -50,6 +52,7 @@ venv.bak/
 # Logs
 *.log
 logs/
+bot.log
 
 # Cache
 .cache/
@@ -59,5 +62,3 @@ logs/
 # OS
 .DS_Store
 Thumbs.db
-".env)"  
-".continue/"  

@@ -1,12 +1,13 @@
 # 🌙 GalaksiAksaraBot - Dokumentasi Lengkap
 
 Bot Telegram bernama "Galaksi Aksara" dengan AI yang hidup, reflektif, dan emosional.
+Catatan: beberapa bagian lama di bawah masih menyebut Ollama sebagai arsip migrasi, tetapi setup aktif untuk versi ini memakai Gemini.
 
 ---
 
 ## 📋 Table of Contents
 1. [Setup Lokal](#setup-lokal)
-2. [Konfigurasi Ollama](#konfigurasi-ollama)
+2. [Konfigurasi Gemini AI](#konfigurasi-gemini-ai)
 3. [Environment Variables](#environment-variables)
 4. [Cara Menjalankan](#cara-menjalankan)
 5. [Deployment ke Render](#deployment-ke-render)
@@ -20,7 +21,8 @@ Bot Telegram bernama "Galaksi Aksara" dengan AI yang hidup, reflektif, dan emosi
 ### Prerequisites
 - Python 3.9+
 - pip (Python package manager)
-- Ollama installed locally
+- Google Gemini API key
+- Internet connection
 - Telegram Bot Token (dari @BotFather)
 
 ### Step 1: Clone atau Download Project
@@ -45,52 +47,33 @@ nano .env  # atau buka dengan text editor
 Edit file `.env` dengan nilai yang sesuai:
 
 ```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHANNEL_ID=@galaksi_aksara_channel
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
+DAILY_POST_TIME=09:00
 ```
 
 ---
 
-## 🧠 Konfigurasi Ollama
+## Konfigurasi Gemini AI
 
-### Step 1: Install Ollama
+Bot ini menggunakan Google Gemini API untuk respons utama, lalu fallback ke puisi bawaan jika API key belum tersedia atau Gemini sedang bermasalah.
 
-**Linux/Mac:**
-```bash
-curl -fsSL https://ollama.ai/install.sh | sh
+### Step 1: Buat API key Gemini
+
+1. Buka https://aistudio.google.com/app/apikey
+2. Buat API key baru
+3. Salin key yang diberikan
+
+### Step 2: Simpan di `.env`
+
+Tambahkan variabel ini:
+
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
 ```
-
-**Windows:**
-Download dari https://ollama.ai
-
-### Step 2: Download Model
-
-Gunakan model ringan seperti `phi` atau `mistral`:
-
-```bash
-ollama pull phi
-```
-
-atau untuk model yang lebih canggih:
-
-```bash
-ollama pull mistral
-ollama pull neural-chat
-```
-
-### Step 3: Jalankan Ollama Server
-
-```bash
-ollama serve
-```
-
-Server akan berjalan di `http://localhost:11434`
-
-### Step 4: Test Ollama
-
-```bash
-curl http://localhost:11434/api/tags
-```
-
-Seharusnya menampilkan daftar model yang tersedia.
 
 ---
 
@@ -114,18 +97,17 @@ Untuk mendapatkan ID channel:
 3. Akses: `https://api.telegram.org/bot{TOKEN}/getUpdates`
 4. Cari `chat.id` di response
 
-### OLLAMA_URL
-URL server Ollama (default: `http://localhost:11434`)
+### GEMINI_API_KEY
+API key dari Google Gemini. Wajib diisi jika ingin bot menjawab dengan Gemini.
 
-Untuk Render (cloud):
-- Setup Ollama di server terpisah
-- atau gunakan fallback (template poems)
+### GEMINI_MODEL
+Model Gemini yang digunakan. Default: `gemini-2.0-flash`.
 
-### OLLAMA_MODEL
-Model yang akan digunakan:
-- `phi` - ringan, cepat, 2.7B parameters
-- `mistral` - lebih bagus, 7B parameters
-- `neural-chat` - spesialisasi chat
+### DAILY_POST_TIME
+Waktu posting puisi harian ke channel. Default: `09:00`.
+
+### LOG_LEVEL
+Level logging aplikasi. Default: `INFO`.
 
 ---
 
@@ -204,11 +186,12 @@ Di Render dashboard:
 2. Add variables:
 
 ```
-TELEGRAM_BOT_TOKEN=your_token
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
 TELEGRAM_CHANNEL_ID=your_channel
-OLLAMA_URL=http://your-ollama-server:11434
-OLLAMA_MODEL=phi
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
 DAILY_POST_TIME=09:00
+LOG_LEVEL=INFO
 ```
 
 ### Step 5: Deploy
@@ -219,24 +202,9 @@ Render akan otomatis deploy dan restart service setiap ada push ke GitHub.
 
 ---
 
-### Setup Ollama untuk Cloud Deployment
+### Deployment Notes
 
-Untuk production di cloud, ada beberapa opsi:
-
-**Option 1: Ollama di Server Terpisah**
-- Setup Ollama di dedicated server (DigitalOcean, AWS, etc)
-- Set `OLLAMA_URL` ke server address
-- Pastikan server accessible dari Render
-
-**Option 2: Gunakan Fallback (Recommended untuk Free Tier)**
-- Bot akan otomatis fallback ke template poems
-- Masih terasa natural dan puitis
-- Tidak perlu setup Ollama yang rumit
-
-**Option 3: Hybrid Approach**
-- Jika Ollama timeout/offline, bot gunakan fallback
-- Jika Ollama online, gunakan AI generation
-- Best of both worlds
+Tidak perlu menjalankan server model lokal. Selama `GEMINI_API_KEY` tersedia, bot akan memakai Gemini. Jika key tidak ada atau request gagal, bot tetap jalan dengan fallback puisi bawaan.
 
 ---
 
@@ -249,7 +217,7 @@ galaxi_aksara_bot/
 ├── bot.py           # Main application
 ├── db.py            # Database management
 ├── personality.py   # Personality engine
-├── ai_engine.py     # AI/Ollama integration
+├── ai_engine.py     # AI/Gemini integration
 ├── styles.py        # Style manager
 ├── requirements.txt # Dependencies
 ├── .env.example     # Env variables template
@@ -311,7 +279,7 @@ galaxi_aksara_bot/
 - **Default**: Puitis, natural, autentik
 
 #### 4. **AI Integration**
-- Uses Ollama with local LLM
+- Uses Gemini with cloud API
 - Advanced prompt engineering
 - Fallback to template poems if AI fails
 - Graceful degradation
@@ -333,9 +301,9 @@ galaxi_aksara_bot/
 
 ### Bot tidak respond
 
-**Check 1: Ollama running?**
+**Check 1: Gemini key ada?**
 ```bash
-curl http://localhost:11434/api/tags
+echo $GEMINI_API_KEY
 ```
 
 **Check 2: Token valid?**
@@ -349,43 +317,27 @@ tail -f bot.log
 
 ---
 
-### Ollama connection error
+### Gemini connection error
 
-**Error: "Cannot connect to Ollama"**
+**Error: Gemini request gagal**
 
 Solution:
-1. Make sure Ollama server running:
-   ```bash
-   ollama serve
-   ```
+1. Make sure `GEMINI_API_KEY` sudah ada di `.env`
+2. Pastikan `GEMINI_MODEL=gemini-2.0-flash` atau model valid lain
+3. Cek logs untuk pesan error dari `google-genai`
 
-2. Check URL in `.env`:
-   ```
-   OLLAMA_URL=http://localhost:11434
-   ```
-
-3. Test manually:
-   ```bash
-   curl http://localhost:11434/api/tags
-   ```
-
-Bot akan use fallback poems jika Ollama tidak available.
+Bot akan pakai fallback poems jika Gemini tidak available.
 
 ---
 
 ### Model not found
 
-**Error: "Model 'phi' not found"**
+**Error: model Gemini tidak valid**
 
 Solution:
-```bash
-ollama pull phi
-```
-
-Check available models:
-```bash
-ollama list
-```
+1. Pakai model yang didukung Gemini, misalnya `gemini-2.0-flash`
+2. Update `.env` lalu restart bot
+3. Cek dokumentasi Gemini jika model berubah
 
 ---
 
@@ -401,10 +353,10 @@ python bot.py
 
 ### Performance issues on Render Free Tier
 
-- Use lightweight model: `phi` instead of `mistral`
-- Enable fallback (automatic)
+- Use lightweight Gemini model: `gemini-2.0-flash`
+- Enable fallback is automatic
 - Consider upgrading to paid instance
-- Or setup separate Ollama server
+- No local model server needed
 
 ---
 
@@ -455,10 +407,11 @@ Edit fallback_poems di `ai_engine.py` untuk customize
 # Run in debug mode
 python -m pdb bot.py
 
-# Test Ollama directly
-curl -X POST http://localhost:11434/api/generate \
-  -H "Content-Type: application/json" \
-  -d '{"model":"phi","prompt":"test","stream":false}'
+# Test Gemini SDK directly
+python - <<'PY'
+from google import genai
+print("Gemini SDK OK")
+PY
 ```
 
 ---
@@ -469,17 +422,14 @@ curl -X POST http://localhost:11434/api/generate \
 - Monitor `bot.log` for errors
 - Clean old messages: `db.cleanup_old_messages()`
 - Update dependencies: `pip install --upgrade -r requirements.txt`
-- Test Ollama connection periodically
+- Verify `GEMINI_API_KEY` is still valid periodically
 
 ### Monitoring Script
 ```bash
 #!/bin/bash
-while true; do
-  if ! curl -s http://localhost:11434/api/tags > /dev/null; then
-    echo "Ollama down at $(date)" >> ollama_status.log
-  fi
-  sleep 300  # Check every 5 minutes
-done
+if [ -z "$GEMINI_API_KEY" ]; then
+  echo "GEMINI_API_KEY not set at $(date)" >> gemini_status.log
+fi
 ```
 
 ---

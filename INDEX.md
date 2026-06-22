@@ -130,7 +130,7 @@ python bot.py
 
 #### `ai_engine.py` (AI Integration)
 **Size:** ~450 lines
-**Purpose:** Ollama integration & response generation
+**Purpose:** Gemini integration & response generation
 
 **Key Classes:**
 - `AIEngine`: AI operations
@@ -138,7 +138,7 @@ python bot.py
 **Key Methods:**
 - `generate_response()`: Main response generation
 - `_build_prompt()`: Sophisticated prompt creation
-- `_call_ollama()`: Ollama API wrapper
+- `_call_gemini()`: Gemini API wrapper
 - `_get_fallback_response()`: Template fallback
 - `generate_daily_poem()`: Daily poem generation
 
@@ -150,13 +150,13 @@ python bot.py
 - Timeout handling
 
 **Dependencies:**
-- requests
+- google-genai
 - asyncio
 - json
 - logging
 
 **External Services:**
-- Ollama API (local)
+- Google Gemini API
 
 ---
 
@@ -207,8 +207,8 @@ Template for environment variables.
 **Variables:**
 - `TELEGRAM_BOT_TOKEN`: Bot token from @BotFather
 - `TELEGRAM_CHANNEL_ID`: Channel for daily posts
-- `OLLAMA_URL`: Ollama server URL
-- `OLLAMA_MODEL`: LLM model name
+- `GEMINI_API_KEY`: Gemini API key
+- `GEMINI_MODEL`: Gemini model name
 - `DAILY_POST_TIME`: Schedule time
 - `LOG_LEVEL`: Logging level
 
@@ -258,10 +258,9 @@ docker run galaxi-aksara
 ---
 
 #### `docker-compose.yml`
-Orchestrates Ollama + Bot containers.
+Orchestrates the bot container with environment variables.
 
 **Services:**
-- `ollama`: Ollama LLM server
 - `bot`: Bot application
 
 **Features:**
@@ -287,7 +286,7 @@ Automated setup script with multiple commands.
 
 **Commands:**
 - `bash setup.sh init`: Initialize project
-- `bash setup.sh check-ollama`: Check Ollama
+- `bash setup.sh check-gemini`: Check Gemini configuration
 - `bash setup.sh test`: Run tests
 - `bash setup.sh docker`: Docker setup
 - `bash setup.sh run`: Run bot
@@ -312,7 +311,7 @@ bash setup.sh full
 #### `README.md` (Complete Guide)
 **Sections:**
 1. Setup Lokal - Local development setup
-2. Konfigurasi Ollama - Ollama installation
+2. Konfigurasi Gemini AI - Gemini setup
 3. Environment Variables - Configuration
 4. Cara Menjalankan - Running the bot
 5. Deployment ke Render - Cloud deployment
@@ -349,7 +348,7 @@ bash setup.sh full
 3. GitHub setup
 4. Render deployment
 5. Environment variables
-6. Ollama setup (3 options)
+6. Gemini deployment notes
 7. Testing
 8. Monitoring
 9. Troubleshooting
@@ -358,7 +357,7 @@ bash setup.sh full
 **When to read:**
 - Deploying to production
 - Using Render
-- Setting up external Ollama
+- Setting up Gemini credentials
 
 **Length:** ~500 lines (detailed)
 
@@ -546,14 +545,13 @@ When setting up, you need:
 **Before Setup:**
 - [ ] Python 3.9+
 - [ ] Git (for version control)
-- [ ] Ollama installed (optional but recommended)
+- [ ] Google Gemini API key
 
 **During Setup:**
 - [ ] Clone/download project
 - [ ] Run `bash setup.sh full`
 - [ ] Copy `.env.example` to `.env`
 - [ ] Edit `.env` with credentials
-- [ ] Start Ollama: `ollama serve`
 - [ ] Run bot: `python bot.py`
 
 **Generated Files:**
@@ -573,7 +571,7 @@ When setting up, you need:
 | Modify database | `db.py` |
 | Change commands | `bot.py` |
 | Adjust schedule | `.env` (DAILY_POST_TIME) |
-| Change Ollama model | `.env` (OLLAMA_MODEL) |
+| Change Gemini model | `.env` (GEMINI_MODEL) |
 | Add custom prompts | `ai_engine.py` (_build_prompt) |
 | Fallback poems | `ai_engine.py` (fallback_poems) |
 | Email/SMS | Would need new integration |

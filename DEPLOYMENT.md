@@ -24,7 +24,7 @@ Panduan lengkap untuk deploy bot ke Render dengan smooth.
    - Bot username: `galaksi_aksara_bot` (unik untuk user mu)
 4. Copy token yang diberikan, contoh:
    ```
-   6234234923:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh
+   your_telegram_bot_token
    ```
 
 ### Get Channel ID
@@ -34,7 +34,7 @@ Option A: Jika sudah punya channel:
 2. Send message ke channel
 3. Buka browser:
    ```
-   https://api.telegram.org/bot{PASTE_TOKEN_HERE}/getUpdates
+   https://api.telegram.org/bot{YOUR_BOT_TOKEN}/getUpdates
    ```
 4. Cari `chat.id` di response
    ```json
@@ -122,10 +122,10 @@ Render akan langsung build dan deploy.
 3. Add variables:
 
 ```
-TELEGRAM_BOT_TOKEN = 6234234923:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefgh
+TELEGRAM_BOT_TOKEN = your_telegram_bot_token
 TELEGRAM_CHANNEL_ID = -1001234567890  (or @channel_name)
-OLLAMA_URL = http://localhost:11434
-OLLAMA_MODEL = phi
+GEMINI_API_KEY = your_gemini_api_key_here
+GEMINI_MODEL = gemini-2.0-flash
 DAILY_POST_TIME = 09:00
 LOG_LEVEL = INFO
 ```
@@ -136,96 +136,18 @@ Render akan otomatis restart service.
 
 ---
 
-## ⚙️ Step 5: Handle Ollama untuk Production
+## ⚙️ Step 5: Gemini di Production
 
-Karena bot perlu akses Ollama, ada beberapa opsi:
+Bot ini memakai Google Gemini API, jadi tidak perlu menjalankan server model lokal di Render. Cukup pastikan `GEMINI_API_KEY` dan `GEMINI_MODEL` sudah diisi di environment variables.
 
-### Option 1: Gunakan Fallback Mode (RECOMMENDED)
-
-**Kelebihan:**
-- Tidak perlu setup Ollama di server
-- Bot tetap berfungsi dengan template poems
-- Fallback poems masih terasa natural dan puitis
-- Free dan simple
-
-**Cara:**
-1. Set `OLLAMA_URL` ke invalid address
-2. AI Engine akan auto fallback
-3. Bot akan respond dengan template poems
-4. Tetap terasa seperti puisi asli!
-
-Aturan fallback:
-```python
-# Jika Ollama offline/timeout → gunakan fallback
-# Fallback poems sudah disetting untuk berbagai mood
-# Natural dan tidak terasa seperti template
-```
-
-### Option 2: Setup Ollama di Server Terpisah
-
-Jika ingin AI generation penuh:
-
-**Setup di DigitalOcean / AWS / Linode:**
-
-1. Create droplet (minimal 2GB RAM, 30GB disk untuk phi)
-2. SSH ke server:
-   ```bash
-   ssh root@your_server_ip
-   ```
-
-3. Install Ollama:
-   ```bash
-   curl -fsSL https://ollama.ai/install.sh | sh
-   ollama pull phi
-   ```
-
-4. Run Ollama:
-   ```bash
-   # Background
-   nohup ollama serve > /tmp/ollama.log 2>&1 &
-   
-   # Or use systemd (better)
-   sudo systemctl enable ollama
-   sudo systemctl start ollama
-   ```
-
-5. Expose port (untuk akses dari Render):
-   ```bash
-   # Edit Ollama config
-   OLLAMA_HOST=0.0.0.0:11434
-   ```
-
-6. Setup firewall:
-   ```bash
-   ufw allow 11434
-   ```
-
-7. Di Render, set:
-   ```
-   OLLAMA_URL = http://your_server_ip:11434
-   ```
-
-**Cost estimate:**
-- DigitalOcean: $5-10/month
-- Atau upgrade Render instance: $7-28/month
-
-### Option 3: Hybrid Approach (BEST)
-
-Setup yang smart:
-
-1. AI Engine coba connect ke Ollama
-2. Jika timeout/error → fallback ke template
-3. Jika available → gunakan AI generation
-4. User tidak notice bedanya
+Jika key tidak tersedia atau Gemini gagal merespons, bot otomatis memakai fallback puisi bawaan.
 
 Sudah implemented di `ai_engine.py`:
 ```python
-try:
-    response = await self._call_ollama(prompt)
-    if response:
-        return response
-except:
-    pass
+# Coba Gemini dulu
+response = await self._call_gemini(prompt)
+if response:
+    return response
 
 # Fallback otomatis
 return self._get_fallback_response(...)
@@ -339,16 +261,14 @@ Render dashboard → Logs tab:
 - Render timezone: UTC
 - Convert ke UTC jika perlu
 
-### Ollama connection error
+### Gemini connection error
 
-**Jika pakai external Ollama:**
-- Check server IP accessible dari Render
-- Check firewall allow port 11434
-- Check OLLAMA_URL format benar
+- Check `GEMINI_API_KEY` ada di environment variables
+- Check `GEMINI_MODEL` valid
+- Check logs untuk error dari `google-genai`
 
 **Better solution:**
-- Disable Ollama
-- Use fallback mode
+- Use fallback mode otomatis
 - Bot tetap berfungsi dengan fallback poems
 
 ---
@@ -364,7 +284,7 @@ Render dashboard → Logs tab:
 - Starter: $7/month (0.5 GB RAM, always on)
 - Standard: $28+/month (2 GB+ RAM, better performance)
 
-### Ollama Server (jika pake external)
+### Legacy Ollama Notes
 - DigitalOcean Basic: $5/month
 - AWS Lightsail: $3.50-5/month
 - Linode: $5/month
@@ -372,7 +292,7 @@ Render dashboard → Logs tab:
 ### Total Cost Options
 - **Free**: Render free + fallback poems = $0
 - **Budget**: Render Starter + fallback = $7/month
-- **Best**: Render Standard + Ollama = $35-50/month
+- **Best**: Render Standard + Gemini = $7-28/month
 
 ---
 
@@ -424,7 +344,7 @@ git push
 
 - [Render Dashboard](https://render.com/dashboard)
 - [Telegram BotFather](https://t.me/botfather)
-- [Ollama](https://ollama.ai)
+- [Google AI Studio](https://aistudio.google.com/app/apikey)
 - [DigitalOcean](https://digitalocean.com)
 
 ---

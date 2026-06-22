@@ -42,10 +42,9 @@ class GalaksiAksaraBot:
     def __init__(self):
         self.token = os.getenv('TELEGRAM_BOT_TOKEN')
         self.channel_id = os.getenv('TELEGRAM_CHANNEL_ID')
-        self.ollama_url = os.getenv('OLLAMA_URL', 'http://localhost:11434')
 
         if not self.token:
-            raise ValueError("TELEGRAM_BOT_TOKEN not found in .env")
+            raise ValueError("TELEGRAM_BOT_TOKEN not found in environment")
 
         self.app = Application.builder().token(self.token).build()
         self._setup_handlers()

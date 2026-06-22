@@ -92,32 +92,21 @@ setup_env() {
     print_info "Please edit .env with your configuration:"
     print_warning "  - TELEGRAM_BOT_TOKEN"
     print_warning "  - TELEGRAM_CHANNEL_ID"
-    print_warning "  - OLLAMA_URL (if using remote Ollama)"
+    print_warning "  - GEMINI_API_KEY"
+    print_warning "  - GEMINI_MODEL (optional)"
 }
 
-# Function: Check Ollama
-check_ollama() {
-    print_info "Checking Ollama installation..."
-    
-    OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
-    
-    if curl -s "$OLLAMA_URL/api/tags" > /dev/null 2>&1; then
-        print_status "Ollama is running at $OLLAMA_URL"
-        
-        # Check available models
-        print_info "Available models:"
-        MODELS=$(curl -s "$OLLAMA_URL/api/tags" | grep -o '"name":"[^"]*"' | cut -d'"' -f4)
-        if [ -z "$MODELS" ]; then
-            print_warning "No models found. Install one with: ollama pull phi"
-        else
-            echo "$MODELS" | sed 's/^/    - /'
-        fi
+# Function: Check Gemini configuration
+check_gemini() {
+    print_info "Checking Gemini configuration..."
+
+    if [ -n "$GEMINI_API_KEY" ]; then
+        print_status "GEMINI_API_KEY found"
+        print_info "Model: ${GEMINI_MODEL:-gemini-2.0-flash}"
         return 0
     else
-        print_warning "Ollama not running at $OLLAMA_URL"
-        print_info "To run Ollama locally:"
-        echo "    ollama serve"
-        print_info "Or install Ollama from: https://ollama.ai"
+        print_warning "GEMINI_API_KEY not set"
+        print_info "Add it to .env to enable Gemini responses"
         return 1
     fi
 }
@@ -221,8 +210,8 @@ full_setup() {
     setup_env
     setup_database
     
-    print_info "\nTesting Ollama..."
-    check_ollama || print_warning "Ollama not available (will use fallback)"
+    print_info "\nTesting Gemini configuration..."
+    check_gemini || print_warning "Gemini key not available (will use fallback poems)"
     
     print_info "\nTesting components..."
     test_components
@@ -232,7 +221,7 @@ full_setup() {
     echo ""
     print_info "Next steps:"
     echo "  1. Edit .env with your credentials"
-    echo "  2. Make sure Ollama is running: ollama serve"
+    echo "  2. Add GEMINI_API_KEY to enable AI responses"
     echo "  3. Run the bot: bash setup.sh run"
     echo ""
 }
@@ -242,8 +231,8 @@ case "${1:-help}" in
     init)
         check_python && setup_venv && install_deps && setup_env && setup_database
         ;;
-    check-ollama)
-        check_ollama
+    check-gemini)
+        check_gemini
         ;;
     test)
         test_components
@@ -262,7 +251,7 @@ case "${1:-help}" in
         echo ""
         echo "Commands:"
         echo "  init           - Initialize project (venv, deps, db)"
-        echo "  check-ollama   - Check Ollama installation"
+        echo "  check-gemini   - Check Gemini configuration"
         echo "  test           - Test all components"
         echo "  docker         - Setup Docker deployment"
         echo "  run            - Run the bot"

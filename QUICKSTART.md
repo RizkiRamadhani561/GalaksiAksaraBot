@@ -11,7 +11,7 @@ Mulai dalam 5 menit!
 # Make sure installed:
 python3 --version      # Python 3.9+
 git --version          # For cloning
-curl --version         # For checking Ollama
+curl --version         # Optional, for testing API endpoints
 ```
 
 ### 2. Clone & Setup
@@ -31,21 +31,11 @@ nano .env
 # Minimal required:
 TELEGRAM_BOT_TOKEN=your_token_from_botfather
 TELEGRAM_CHANNEL_ID=@your_channel  (optional)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-2.0-flash
 ```
 
-### 4. Start Ollama (terminal baru)
-```bash
-ollama serve
-```
-
-Models tersedia:
-```bash
-ollama pull phi         # Fast, lightweight (recommended)
-ollama pull mistral     # Better quality
-ollama pull neural-chat # Chat optimized
-```
-
-### 5. Run Bot (terminal ketiga)
+### 4. Run Bot
 ```bash
 cd galaxi_aksara_bot
 source venv/bin/activate
@@ -57,7 +47,7 @@ Output seharusnya:
 2024-01-15 10:30:47,345 - root - INFO - 🌙 Galaksi Aksara bot starting...
 ```
 
-### 6. Test
+### 5. Test
 Cari bot di Telegram, kirim `/start`
 
 ---
@@ -97,7 +87,7 @@ docker-compose down
 | Problem | Solution |
 |---------|----------|
 | Bot tidak respond | 1. Check terminal ada error 2. Check token di .env 3. Cek logs |
-| Cannot connect Ollama | Jalankan `ollama serve` di terminal baru |
+| Bot hanya fallback | Pastikan `GEMINI_API_KEY` sudah diisi di `.env` |
 | ModuleNotFoundError | Run `pip install -r requirements.txt` |
 | Database error | Run `rm galaxi_aksara.db` then `python bot.py` |
 | Permission denied setup.sh | Run `chmod +x setup.sh` |
@@ -125,7 +115,7 @@ docker-compose down
 
 - Bot learns about user over time
 - More interaction = deeper responses
-- Fallback poems active jika Ollama offline
+- Fallback poems aktif jika Gemini key belum tersedia atau request gagal
 - Database auto-cleanup old chats (30 days)
 
 ---
