@@ -239,6 +239,12 @@ Teruslah berbagi... aku akan terus berkembang mengenalmu.
                 profile or {},
                 memory_tags
             )
+            response_mode = ai_engine.get_response_mode(
+                user_message=user_message,
+                user_profile=profile or {},
+                memory_tags=memory_tags,
+                style=user_style,
+            )
             response = await ai_engine.generate_response(
                 user_message=user_message,
                 chat_history=chat_history,
@@ -246,7 +252,8 @@ Teruslah berbagi... aku akan terus berkembang mengenalmu.
                 style=user_style,
                 memory_tags=memory_tags,
                 user_id=user_id,
-                personality_context=personality_context
+                personality_context=personality_context,
+                response_mode=response_mode
             )
             db.save_message(user_id, 'bot', response)
             await self._send_with_delay(context.bot, chat_id, response)

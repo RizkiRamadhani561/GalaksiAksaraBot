@@ -86,10 +86,17 @@ class AIEngine:
                                 style: str = 'default',
                                 memory_tags: List[Dict] = None,
                                 user_id: Optional[int] = None,
-                                personality_context: str = "") -> str:
+                                personality_context: str = "",
+                                response_mode: Optional[str] = None) -> str:
         """Generate response using Gemini AI with personality context"""
         try:
             recent_responses = self.response_cache.get_recent(user_id) if user_id is not None else []
+            response_mode = response_mode or self.get_response_mode(
+                user_message=user_message,
+                user_profile=user_profile,
+                memory_tags=memory_tags or [],
+                style=style,
+            )
             prompt = self._build_prompt(
                 user_message=user_message,
                 chat_history=chat_history,
@@ -98,6 +105,7 @@ class AIEngine:
                 memory_tags=memory_tags or [],
                 recent_responses=recent_responses,
                 personality_context=personality_context,
+                response_mode=response_mode,
             )
 
             if self.client:
@@ -107,14 +115,14 @@ class AIEngine:
                         self.response_cache.add_response(user_id, response)
                     return response
 
-            fallback = self._get_fallback_response(user_message, style, recent_responses)
+            fallback = self._get_fallback_response(user_message, style, recent_responses, response_mode=response_mode)
             if user_id is not None:
                 self.response_cache.add_response(user_id, fallback)
             return fallback
 
         except Exception as e:
             logger.error(f"Error generating response: {str(e)}")
-            fallback = self._get_fallback_response(user_message, style)
+            fallback = self._get_fallback_response(user_message, style, response_mode=response_mode)
             if user_id is not None:
                 self.response_cache.add_response(user_id, fallback)
             return fallback
@@ -126,7 +134,8 @@ class AIEngine:
                      style: str,
                      memory_tags: List[Dict],
                      recent_responses: Optional[List[str]] = None,
-                     personality_context: str = "") -> str:
+                     personality_context: str = "",
+                     response_mode: str = "conversational") -> str:
         """Build sophisticated prompt with personality context"""
 
         user_profile = user_profile or {}
@@ -184,15 +193,25 @@ Peran utama kamu adalah pendamping percakapan yang lembut dan empatik. Kamu bole
 
 {personality_context}
 
+MODE RESPON SAAT INI: {response_mode}
+
 {chat_context}
 
 🎨 CARA RESPON (SANGAT PENTING):
 {style_instructions}
 
 ATURAN UMUM:
-- Jika user sedang curhat, jawab dengan empati dulu baru saran ringan
-- Kalau pertanyaannya ringan, boleh jawab lebih natural dan percakapan biasa
-- Kalau user minta puisi, baru buat puitis
+- Kalau MODE RESPON = supportive:
+  - Utamakan validasi perasaan dulu
+  - Pakai bahasa yang hangat, natural, dan seperti teman yang mendengarkan
+  - Jangan langsung memberi solusi panjang kecuali diminta
+  - Boleh tanya satu pertanyaan lembut di akhir
+  - Hindari terlalu banyak metafora, hindari gaya terlalu puitis
+- Kalau MODE RESPON = conversational:
+  - Jawab ringan, manusiawi, dan nyambung ke isi pesan
+  - Boleh campur sedikit puitis, tapi tetap terasa seperti obrolan
+- Kalau MODE RESPON = poetic:
+  - Baru boleh lebih puitis dan simbolik
 - Respon 2-6 baris saja, kecuali user minta penjelasan lebih panjang
 - Jangan selalu terdengar seperti kutipan buku
 - Gunakan metafora bila cocok, bukan wajib di setiap respons
@@ -319,7 +338,7 @@ Hanya puisi, tanpa penjelasan."""
             logger.error(f"Error generating daily poem: {str(e)}")
             return self._get_random_fallback_poem()
 
-    def _get_fallback_response(self, user_message: str, style: str, recent_responses: Optional[List[str]] = None) -> str:
+    def _get_fallback_response(self, user_message: str, style: str, recent_responses: Optional[List[str]] = None, response_mode: Optional[str] = None) -> str:
         """Get fallback response when AI unavailable."""
         supportive_templates = [
             "Aku nangkap ini lagi berat buat kamu. Kamu tidak harus kuat sendirian sekarang. Cerita pelan-pelan saja kalau mau.",
@@ -328,7 +347,7 @@ Hanya puisi, tanpa penjelasan."""
             "Perasaanmu valid. Kalau kamu mau, kita bisa pecah pelan-pelan apa yang sebenarnya bikin kamu terasa begini."
         ]
 
-        if self._looks_like_support_request(user_message):
+        if response_mode == "supportive" or self._looks_like_support_request(user_message):
             return random.choice(supportive_templates)
 
         poems = self.fallback_poems.get(style, self.fallback_poems['default'])
@@ -341,7 +360,11 @@ Hanya puisi, tanpa penjelasan."""
             if filtered:
                 poems = filtered
 
-        if random.random() < 0.45:
+        if response_mode == "conversational" and random.random() < 0.45:
+            return random.choice(supportive_templates)
+        if response_mode == "poetic":
+            return random.choice(poems)
+        if random.random() < 0.25:
             return random.choice(supportive_templates)
         return random.choice(poems)
 
@@ -483,3 +506,27 @@ untuk memahami apa yang tak selesai dijelaskan.""",
             "masalah", "sakit hati", "overthinking"
         ]
         return any(keyword in lowered for keyword in support_keywords)
+
+    def get_response_mode(self, user_message: str, user_profile: Dict, memory_tags: List[Dict], style: str = 'default') -> str:
+        """Classify the most helpful response style for the current message."""
+        if self._looks_like_support_request(user_message):
+            return "supportive"
+
+        profile = user_profile or {}
+        mood = (profile.get("mood") or "").lower()
+        if mood in {"sedih", "duka", "takut", "cemas", "gelisah", "kecewa", "marah"}:
+            return "supportive"
+
+        if style in {"melankoli", "hope", "mystery", "contemplative"}:
+            return "conversational"
+
+        if memory_tags:
+            tags = {str(tag.get("tag", "")).lower() for tag in memory_tags[:3]}
+            if {"sedih", "lelah", "kesunyian", "kebingungan"} & tags:
+                return "supportive"
+
+        lowered = (user_message or "").lower()
+        if "?" in lowered or len(lowered.split()) <= 4:
+            return "conversational"
+
+        return "poetic"
