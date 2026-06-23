@@ -235,13 +235,18 @@ Teruslah berbagi... aku akan terus berkembang mengenalmu.
             chat_history = db.get_chat_history(user_id, limit=10)
             user_style = style_manager.get_user_style(user_id)
             memory_tags = db.get_memory_tags(user_id)
+            personality_context = personality_engine.get_personality_prompt_addition(
+                profile or {},
+                memory_tags
+            )
             response = await ai_engine.generate_response(
                 user_message=user_message,
                 chat_history=chat_history,
                 user_profile=profile,
                 style=user_style,
                 memory_tags=memory_tags,
-                user_id=user_id
+                user_id=user_id,
+                personality_context=personality_context
             )
             db.save_message(user_id, 'bot', response)
             await self._send_with_delay(context.bot, chat_id, response)

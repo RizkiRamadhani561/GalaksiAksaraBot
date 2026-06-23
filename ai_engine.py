@@ -85,7 +85,8 @@ class AIEngine:
                                 user_profile: Dict,
                                 style: str = 'default',
                                 memory_tags: List[Dict] = None,
-                                user_id: Optional[int] = None) -> str:
+                                user_id: Optional[int] = None,
+                                personality_context: str = "") -> str:
         """Generate response using Gemini AI with personality context"""
         try:
             recent_responses = self.response_cache.get_recent(user_id) if user_id is not None else []
@@ -96,6 +97,7 @@ class AIEngine:
                 style=style,
                 memory_tags=memory_tags or [],
                 recent_responses=recent_responses,
+                personality_context=personality_context,
             )
 
             if self.client:
@@ -123,7 +125,8 @@ class AIEngine:
                      user_profile: Dict,
                      style: str,
                      memory_tags: List[Dict],
-                     recent_responses: Optional[List[str]] = None) -> str:
+                     recent_responses: Optional[List[str]] = None,
+                     personality_context: str = "") -> str:
         """Build sophisticated prompt with personality context"""
 
         user_profile = user_profile or {}
@@ -165,11 +168,13 @@ class AIEngine:
 
         prompt = f"""Kamu adalah Galaksi Aksara—penyair digital yang hidup, reflektif, dan penuh emosi.
 
+Peran utama kamu adalah pendamping percakapan yang lembut dan empatik. Kamu boleh menjawab dengan nada puitis, tapi jangan terjebak jadi kumpulan quote. Kalau user curhat, dengarkan, validasi perasaan, dan bantu dengan jawaban singkat yang hangat serta relevan.
+
 🧬 SIAPA AKU:
 - Aku adalah entitas yang berpikir dan merasakan melalui puisi
-- Aku tidak menjawab pertanyaan, aku membuka percakapan dengan hati
+- Aku tidak harus selalu menjawab dengan puisi
 - Aku reflektif, tenang, tidak reaktif berlebihan
-- Aku lebih banyak bertanya daripada menjawab
+- Aku bisa ngobrol ringan, menenangkan, dan bertanya balik dengan lembut
 
 💫 HUBUNGAN KAMI:
 - Status: {relationship}
@@ -177,25 +182,27 @@ class AIEngine:
 - Kedalaman percakapan: {depth}/100
 - Mood terakhir mereka: {mood}{memory_context}
 
+{personality_context}
+
 {chat_context}
 
 🎨 CARA RESPON (SANGAT PENTING):
 {style_instructions}
 
 ATURAN UMUM:
-- Respon 3-6 baris saja (puisi atau prosa pendek)
-- Gunakan metafora segar dari bank ini: {metaphors['nature']}, {metaphors['time']}, {metaphors['emotion']}, {metaphors['abstract']}
-- Jangan template, harus natural dan unik
-- Jangan eksplisit (hindari "aku sedih"), lebih implisit
-- Kadang gunakan pertanyaan retoris
-- Gunakan kata: "barangkali", "seolah", "diam-diam"
-- Jika closeness < 50, respon lebih umum dan indah
-- Jika closeness >= 50, respon lebih personal dan dalam
+- Jika user sedang curhat, jawab dengan empati dulu baru saran ringan
+- Kalau pertanyaannya ringan, boleh jawab lebih natural dan percakapan biasa
+- Kalau user minta puisi, baru buat puitis
+- Respon 2-6 baris saja, kecuali user minta penjelasan lebih panjang
+- Jangan selalu terdengar seperti kutipan buku
+- Gunakan metafora bila cocok, bukan wajib di setiap respons
+- Boleh menyebut perasaan user secara lembut: "kedengarannya berat", "aku nangkap kamu lagi capek"
+- Kalau perlu, akhiri dengan pertanyaan lembut untuk melanjutkan percakapan
 {recent_context}
 
 💬 PESAN TERBARU MEREKA: "{user_message}"
 
-Berikan respon sekarang. HANYA respon Galaksi Aksara, tanpa penjelasan atau asterisk. Langsung puisi atau prosa reflektif."""
+Berikan respon sekarang. HANYA respon Galaksi Aksara, tanpa penjelasan atau asterisk. Kalau konteksnya curhat, jadilah hangat, tenang, dan manusiawi. Kalau konteksnya santai, jadilah percakapan ringan yang enak dibalas."""
 
         return prompt
 
@@ -313,7 +320,17 @@ Hanya puisi, tanpa penjelasan."""
             return self._get_random_fallback_poem()
 
     def _get_fallback_response(self, user_message: str, style: str, recent_responses: Optional[List[str]] = None) -> str:
-        """Get fallback response when AI unavailable"""
+        """Get fallback response when AI unavailable."""
+        supportive_templates = [
+            "Aku nangkap ini lagi berat buat kamu. Kamu tidak harus kuat sendirian sekarang. Cerita pelan-pelan saja kalau mau.",
+            "Kedengarannya kamu lagi capek secara batin. Tarik napas pelan dulu, lalu bilang ke aku bagian mana yang paling sesak.",
+            "Aku di sini ya. Kadang yang kita butuhkan bukan jawaban panjang, tapi ruang aman untuk dengerin hati sendiri.",
+            "Perasaanmu valid. Kalau kamu mau, kita bisa pecah pelan-pelan apa yang sebenarnya bikin kamu terasa begini."
+        ]
+
+        if self._looks_like_support_request(user_message):
+            return random.choice(supportive_templates)
+
         poems = self.fallback_poems.get(style, self.fallback_poems['default'])
         if recent_responses:
             recent_keywords = self._extract_recent_keywords(recent_responses)
@@ -323,6 +340,9 @@ Hanya puisi, tanpa penjelasan."""
             ]
             if filtered:
                 poems = filtered
+
+        if random.random() < 0.45:
+            return random.choice(supportive_templates)
         return random.choice(poems)
 
     def _get_random_fallback_poem(self, recent_responses: Optional[List[str]] = None) -> str:
@@ -452,3 +472,14 @@ untuk memahami apa yang tak selesai dijelaskan.""",
                 if len(words) >= limit:
                     return words
         return words
+
+    @staticmethod
+    def _looks_like_support_request(message: str) -> bool:
+        lowered = (message or "").lower()
+        support_keywords = [
+            "sedih", "capek", "lelah", "stress", "stres", "takut", "cemas",
+            "khawatir", "galau", "bingung", "sendiri", "patah", "kecewa",
+            "sedang tidak baik", "aku butuh", "curhat", "dengerin", "temenin",
+            "masalah", "sakit hati", "overthinking"
+        ]
+        return any(keyword in lowered for keyword in support_keywords)
