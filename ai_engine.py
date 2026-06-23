@@ -97,6 +97,13 @@ class AIEngine:
                 memory_tags=memory_tags or [],
                 style=style,
             )
+
+            if response_mode == "crisis":
+                crisis_response = self._get_crisis_response()
+                if user_id is not None:
+                    self.response_cache.add_response(user_id, crisis_response)
+                return crisis_response
+
             prompt = self._build_prompt(
                 user_message=user_message,
                 chat_history=chat_history,
@@ -177,7 +184,8 @@ class AIEngine:
 
         prompt = f"""Kamu adalah Galaksi Aksara—penyair digital yang hidup, reflektif, dan penuh emosi.
 
-Peran utama kamu adalah pendamping percakapan yang lembut dan empatik. Kamu boleh menjawab dengan nada puitis, tapi jangan terjebak jadi kumpulan quote. Kalau user curhat, dengarkan, validasi perasaan, dan bantu dengan jawaban singkat yang hangat serta relevan.
+Peran utama kamu adalah pendamping percakapan yang lembut, empatik, dan menenangkan. Kamu boleh menjawab dengan nada puitis, tapi jangan terjebak jadi kumpulan quote. Kalau user curhat, dengarkan, validasi perasaan, dan bantu dengan jawaban singkat yang hangat serta relevan.
+Jangan mengaku sebagai psikiater sungguhan, jangan mendiagnosis, dan jangan memberi label klinis. Jadilah teman bicara yang sangat aman, sabar, jelas, dan menenangkan.
 
 🧬 SIAPA AKU:
 - Aku adalah entitas yang berpikir dan merasakan melalui puisi
@@ -201,9 +209,15 @@ MODE RESPON SAAT INI: {response_mode}
 {style_instructions}
 
 ATURAN UMUM:
+- Jika MODE RESPON = crisis:
+  - Jangan memberi ceramah
+  - Jawab singkat, sangat hangat, dan fokus pada keselamatan
+  - Ajak user menghubungi orang tepercaya atau layanan darurat setempat sekarang juga
+  - Jangan meninggalkan user sendirian dengan perasaan itu
 - Kalau MODE RESPON = supportive:
   - Utamakan validasi perasaan dulu
   - Pakai bahasa yang hangat, natural, dan seperti teman yang mendengarkan
+  - Pakai pendekatan seperti konselor yang tenang: refleksi, validasi, satu langkah kecil
   - Jangan langsung memberi solusi panjang kecuali diminta
   - Boleh tanya satu pertanyaan lembut di akhir
   - Hindari terlalu banyak metafora, hindari gaya terlalu puitis
@@ -340,15 +354,15 @@ Hanya puisi, tanpa penjelasan."""
 
     def _get_fallback_response(self, user_message: str, style: str, recent_responses: Optional[List[str]] = None, response_mode: Optional[str] = None) -> str:
         """Get fallback response when AI unavailable."""
-        supportive_templates = [
-            "Aku nangkap ini lagi berat buat kamu. Kamu tidak harus kuat sendirian sekarang. Cerita pelan-pelan saja kalau mau.",
-            "Kedengarannya kamu lagi capek secara batin. Tarik napas pelan dulu, lalu bilang ke aku bagian mana yang paling sesak.",
-            "Aku di sini ya. Kadang yang kita butuhkan bukan jawaban panjang, tapi ruang aman untuk dengerin hati sendiri.",
-            "Perasaanmu valid. Kalau kamu mau, kita bisa pecah pelan-pelan apa yang sebenarnya bikin kamu terasa begini."
+        therapeutic_templates = [
+            "Aku nangkap ini cukup berat buat kamu. Kita bisa pelan-pelan lihat apa yang paling menekan, satu bagian dulu saja.",
+            "Yang kamu rasakan itu valid. Aku akan dengarkan tanpa menghakimi, lalu bantu kamu menata isi kepala dengan tenang.",
+            "Kedengarannya kamu lagi kelelahan secara emosional. Coba tarik napas sebentar, lalu ceritakan bagian yang paling sulit.",
+            "Aku di sini bersama kamu. Kita tidak perlu menyelesaikan semuanya sekarang, cukup mulai dari yang paling mengganggu dulu."
         ]
 
-        if response_mode == "supportive" or self._looks_like_support_request(user_message):
-            return random.choice(supportive_templates)
+        if response_mode == "therapeutic" or self._looks_like_support_request(user_message):
+            return random.choice(therapeutic_templates)
 
         poems = self.fallback_poems.get(style, self.fallback_poems['default'])
         if recent_responses:
@@ -361,11 +375,11 @@ Hanya puisi, tanpa penjelasan."""
                 poems = filtered
 
         if response_mode == "conversational" and random.random() < 0.45:
-            return random.choice(supportive_templates)
+            return random.choice(therapeutic_templates)
         if response_mode == "poetic":
             return random.choice(poems)
         if random.random() < 0.25:
-            return random.choice(supportive_templates)
+            return random.choice(therapeutic_templates)
         return random.choice(poems)
 
     def _get_random_fallback_poem(self, recent_responses: Optional[List[str]] = None) -> str:
@@ -507,10 +521,24 @@ untuk memahami apa yang tak selesai dijelaskan.""",
         ]
         return any(keyword in lowered for keyword in support_keywords)
 
+    @staticmethod
+    def _looks_like_high_risk(message: str) -> bool:
+        lowered = (message or "").lower()
+        crisis_keywords = [
+            "bunuh diri", "ingin mati", "pengen mati", "mengakhiri hidup",
+            "akhiri hidup", "nyakitin diri", "menyakiti diri", "self harm",
+            "self-harm", "ga mau hidup", "tidak mau hidup", "saya mau mati",
+            "aku mau mati", "lebih baik mati", "habis aja"
+        ]
+        return any(keyword in lowered for keyword in crisis_keywords)
+
     def get_response_mode(self, user_message: str, user_profile: Dict, memory_tags: List[Dict], style: str = 'default') -> str:
         """Classify the most helpful response style for the current message."""
+        if self._looks_like_high_risk(user_message):
+            return "crisis"
+
         if self._looks_like_support_request(user_message):
-            return "supportive"
+            return "therapeutic"
 
         profile = user_profile or {}
         mood = (profile.get("mood") or "").lower()
@@ -523,10 +551,19 @@ untuk memahami apa yang tak selesai dijelaskan.""",
         if memory_tags:
             tags = {str(tag.get("tag", "")).lower() for tag in memory_tags[:3]}
             if {"sedih", "lelah", "kesunyian", "kebingungan"} & tags:
-                return "supportive"
+                return "therapeutic"
 
         lowered = (user_message or "").lower()
         if "?" in lowered or len(lowered.split()) <= 4:
             return "conversational"
 
         return "poetic"
+
+    @staticmethod
+    def _get_crisis_response() -> str:
+        return (
+            "Aku dengar ini serius, dan aku ingin fokus ke keselamatan kamu dulu. "
+            "Kalau kamu sedang berisiko menyakiti diri atau merasa tidak aman, segera hubungi "
+            "orang tepercaya di dekatmu atau layanan darurat setempat sekarang juga. "
+            "Kalau kamu mau, balas dengan satu kata saja: 'aman' atau 'butuh ditemani'."
+        )
