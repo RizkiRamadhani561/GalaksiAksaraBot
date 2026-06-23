@@ -55,6 +55,10 @@ class GalaksiAksaraBot:
         self.app.add_handler(CommandHandler("romantis", self.cmd_romantis))
         self.app.add_handler(CommandHandler("islami", self.cmd_islami))
         self.app.add_handler(CommandHandler("dark", self.cmd_dark))
+        self.app.add_handler(CommandHandler("melankoli", self.cmd_melankoli))
+        self.app.add_handler(CommandHandler("hope", self.cmd_hope))
+        self.app.add_handler(CommandHandler("mystery", self.cmd_mystery))
+        self.app.add_handler(CommandHandler("contemplative", self.cmd_contemplative))
         self.app.add_handler(CommandHandler("status", self.cmd_status))
         self.app.add_handler(
             MessageHandler(
@@ -70,6 +74,10 @@ class GalaksiAksaraBot:
                 BotCommand("romantis", "Ubah gaya menjadi romantis"),
                 BotCommand("islami", "Ubah gaya menjadi islami"),
                 BotCommand("dark", "Ubah gaya menjadi dark"),
+                BotCommand("melankoli", "Ubah gaya menjadi melankoli"),
+                BotCommand("hope", "Ubah gaya menjadi hope"),
+                BotCommand("mystery", "Ubah gaya menjadi mystery"),
+                BotCommand("contemplative", "Ubah gaya menjadi contemplative"),
                 BotCommand("status", "Lihat profil dan kedekatan"),
             ]
             await app.bot.set_my_commands(commands)
@@ -92,6 +100,10 @@ Gunakan:
 • /romantis - untuk gaya yang lembut dan hangat
 • /islami - untuk refleksi spiritual
 • /dark - untuk kedalaman yang sunyi
+• /melankoli - untuk sedih yang indah
+• /hope - untuk harapan yang hangat
+• /mystery - untuk nuansa misterius
+• /contemplative - untuk perenungan yang tenang
 
 Mulai dari sini... apa yang ada di hatimu hari ini?
 """
@@ -102,38 +114,79 @@ Mulai dari sini... apa yang ada di hatimu hari ini?
         )
         logger.info(f"User {user_id} started bot")
 
-    async def cmd_romantis(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def _set_style_reply(self, update: Update, context: ContextTypes.DEFAULT_TYPE, style: str, title: str, description: str):
         user_id = update.effective_user.id
-        style_manager.set_user_style(user_id, 'romantis')
-        response = "💕 Gaya berubah menjadi **romantis**\n\nAku akan berbicara dengan lebih lembut, lebih hangat. Rindu akan menjadi musik dalam setiap kata."
+        style_manager.set_user_style(user_id, style)
+        response = f"✨ Gaya berubah menjadi **{title}**\n\n{description}"
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=response,
             parse_mode='Markdown'
         )
-        logger.info(f"User {user_id} changed style to romantis")
+        logger.info(f"User {user_id} changed style to {style}")
+
+    async def cmd_romantis(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self._set_style_reply(
+            update,
+            context,
+            'romantis',
+            'romantis',
+            'Aku akan berbicara dengan lebih lembut, lebih hangat. Rindu akan menjadi musik dalam setiap kata.'
+        )
 
     async def cmd_islami(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        style_manager.set_user_style(user_id, 'islami')
-        response = "🌙 Gaya berubah menjadi **islami**\n\nRefleksi akan lebih dalam. Aku akan berbicara tentang makna, tentang cahaya dalam kegelapan."
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=response,
-            parse_mode='Markdown'
+        await self._set_style_reply(
+            update,
+            context,
+            'islami',
+            'islami',
+            'Refleksi akan lebih dalam. Aku akan berbicara tentang makna, tentang cahaya dalam kegelapan.'
         )
-        logger.info(f"User {user_id} changed style to islami")
 
     async def cmd_dark(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
-        style_manager.set_user_style(user_id, 'dark')
-        response = "🌑 Gaya berubah menjadi **dark**\n\nSunyilah akan menjadi ruang kita. Kedalaman akan berbicara lebih keras dari cahaya."
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=response,
-            parse_mode='Markdown'
+        await self._set_style_reply(
+            update,
+            context,
+            'dark',
+            'dark',
+            'Sunyilah akan menjadi ruang kita. Kedalaman akan berbicara lebih keras dari cahaya.'
         )
-        logger.info(f"User {user_id} changed style to dark")
+
+    async def cmd_melankoli(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self._set_style_reply(
+            update,
+            context,
+            'melankoli',
+            'melankoli',
+            'Sedih yang indah akan berbicara lebih pelan, lembut, dan reflektif.'
+        )
+
+    async def cmd_hope(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self._set_style_reply(
+            update,
+            context,
+            'hope',
+            'hope',
+            'Aku akan menatap cahaya, menumbuhkan harapan, dan menjaga kata-kata tetap hangat.'
+        )
+
+    async def cmd_mystery(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self._set_style_reply(
+            update,
+            context,
+            'mystery',
+            'mystery',
+            'Aku akan berbicara seperti bayang yang menyimpan tanya dan rahasia.'
+        )
+
+    async def cmd_contemplative(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self._set_style_reply(
+            update,
+            context,
+            'contemplative',
+            'contemplative',
+            'Aku akan berbicara dengan lebih tenang, dalam, dan penuh perenungan.'
+        )
 
     async def cmd_status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
@@ -187,7 +240,8 @@ Teruslah berbagi... aku akan terus berkembang mengenalmu.
                 chat_history=chat_history,
                 user_profile=profile,
                 style=user_style,
-                memory_tags=memory_tags
+                memory_tags=memory_tags,
+                user_id=user_id
             )
             db.save_message(user_id, 'bot', response)
             await self._send_with_delay(context.bot, chat_id, response)

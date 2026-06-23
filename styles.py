@@ -16,7 +16,16 @@ class StyleManager:
         self.default_style = 'default'
         
         # Valid styles
-        self.valid_styles = ['romantis', 'islami', 'dark', 'default']
+        self.valid_styles = [
+            'romantis',
+            'islami',
+            'dark',
+            'default',
+            'melankoli',
+            'hope',
+            'mystery',
+            'contemplative',
+        ]
     
     def set_user_style(self, user_id: int, style: str) -> bool:
         """Set user's preferred style"""
@@ -52,6 +61,10 @@ class StyleManager:
             'romantis': '💕 Lembut, hangat, penuh rindu dan cinta',
             'islami': '🌙 Reflektif, spiritual, penuh makna',
             'dark': '🌑 Sunyi, dalam, kedalaman dan penerimaan',
-            'default': '✨ Puitis, reflektif, dan autentik'
+            'default': '✨ Puitis, reflektif, dan autentik',
+            'melankoli': '💔 Sedih yang indah, lembut, dan reflektif',
+            'hope': '✨ Penuh harapan, hangat, dan menatap cahaya',
+            'mystery': '🌫️ Misterius, penuh tanya, dan mengundang penasaran',
+            'contemplative': '🤔 Dalam perenungan, filosofis, dan tenang',
         }
         return descriptions.get(style, 'Gaya tidak diketahui')
