@@ -9,7 +9,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY bot.py db.py personality.py ai_engine.py styles.py .
+COPY bot.py db.py personality.py ai_engine.py styles.py fallback_poems.json ./
 
 # Create logs directory
 RUN mkdir -p logs
