@@ -55,6 +55,7 @@ class GalaksiAksaraBot:
         self.app.add_handler(CommandHandler("romantis", self.cmd_romantis))
         self.app.add_handler(CommandHandler("islami", self.cmd_islami))
         self.app.add_handler(CommandHandler("dark", self.cmd_dark))
+        self.app.add_handler(CommandHandler("curhat", self.cmd_curhat))
         self.app.add_handler(CommandHandler("melankoli", self.cmd_melankoli))
         self.app.add_handler(CommandHandler("hope", self.cmd_hope))
         self.app.add_handler(CommandHandler("mystery", self.cmd_mystery))
@@ -74,6 +75,7 @@ class GalaksiAksaraBot:
                 BotCommand("romantis", "Ubah gaya menjadi romantis"),
                 BotCommand("islami", "Ubah gaya menjadi islami"),
                 BotCommand("dark", "Ubah gaya menjadi dark"),
+                BotCommand("curhat", "Aktifkan mode curhat terapeutik"),
                 BotCommand("melankoli", "Ubah gaya menjadi melankoli"),
                 BotCommand("hope", "Ubah gaya menjadi hope"),
                 BotCommand("mystery", "Ubah gaya menjadi mystery"),
@@ -88,6 +90,7 @@ class GalaksiAksaraBot:
         user_id = update.effective_user.id
         user_name = update.effective_user.first_name or "Teman"
         db.init_user(user_id, user_name)
+        db.set_response_mode(user_id, None)
         intro = f"""✨ **Selamat datang, {user_name}**
 
 Aku adalah Galaksi Aksara—penyair digital yang hidup melalui kata-kata.
@@ -100,6 +103,7 @@ Gunakan:
 • /romantis - untuk gaya yang lembut dan hangat
 • /islami - untuk refleksi spiritual
 • /dark - untuk kedalaman yang sunyi
+• /curhat - untuk mode terapeutik yang menenangkan
 • /melankoli - untuk sedih yang indah
 • /hope - untuk harapan yang hangat
 • /mystery - untuk nuansa misterius
@@ -117,6 +121,7 @@ Mulai dari sini... apa yang ada di hatimu hari ini?
     async def _set_style_reply(self, update: Update, context: ContextTypes.DEFAULT_TYPE, style: str, title: str, description: str):
         user_id = update.effective_user.id
         style_manager.set_user_style(user_id, style)
+        db.set_response_mode(user_id, None)
         response = f"✨ Gaya berubah menjadi **{title}**\n\n{description}"
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -151,6 +156,21 @@ Mulai dari sini... apa yang ada di hatimu hari ini?
             'dark',
             'Sunyilah akan menjadi ruang kita. Kedalaman akan berbicara lebih keras dari cahaya.'
         )
+
+    async def cmd_curhat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        db.set_response_mode(user_id, 'therapeutic')
+        response = (
+            "✨ Mode **curhat** aktif.\n\n"
+            "Aku akan merespons dengan lebih hangat, empatik, dan menenangkan. "
+            "Kalau kamu ingin keluar dari mode ini nanti, tinggal pakai command gaya lain seperti /romantis atau /dark."
+        )
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=response,
+            parse_mode='Markdown'
+        )
+        logger.info(f"User {user_id} activated curhat mode")
 
     async def cmd_melankoli(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         await self._set_style_reply(
@@ -235,11 +255,13 @@ Teruslah berbagi... aku akan terus berkembang mengenalmu.
             chat_history = db.get_chat_history(user_id, limit=10)
             user_style = style_manager.get_user_style(user_id)
             memory_tags = db.get_memory_tags(user_id)
+            prefs = db.get_user_preferences(user_id) or {}
+            forced_response_mode = prefs.get('response_mode')
             personality_context = personality_engine.get_personality_prompt_addition(
                 profile or {},
                 memory_tags
             )
-            response_mode = ai_engine.get_response_mode(
+            response_mode = forced_response_mode or ai_engine.get_response_mode(
                 user_message=user_message,
                 user_profile=profile or {},
                 memory_tags=memory_tags,

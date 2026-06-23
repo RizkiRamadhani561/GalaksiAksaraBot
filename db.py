@@ -62,6 +62,11 @@ class Database:
                 poetry_preference TEXT DEFAULT 'metaphorical'
             )
         ''')
+
+        cursor.execute("PRAGMA table_info(user_preferences)")
+        columns = {row[1] for row in cursor.fetchall()}
+        if 'response_mode' not in columns:
+            cursor.execute("ALTER TABLE user_preferences ADD COLUMN response_mode TEXT DEFAULT NULL")
         
         conn.commit()
         conn.close()
@@ -126,6 +131,39 @@ class Database:
         if row:
             return dict(row)
         return None
+
+    def get_user_preferences(self, user_id: int) -> Optional[Dict]:
+        """Get user preference settings."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            SELECT * FROM user_preferences WHERE user_id = ?
+        ''', (user_id,))
+
+        row = cursor.fetchone()
+        conn.close()
+
+        if row:
+            return dict(row)
+        return None
+
+    def set_response_mode(self, user_id: int, response_mode: Optional[str]):
+        """Persist the user's explicit response mode."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute('''
+                INSERT INTO user_preferences (user_id, response_mode)
+                VALUES (?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET response_mode = excluded.response_mode
+            ''', (user_id, response_mode))
+            conn.commit()
+        except Exception as e:
+            logger.error(f"Error setting response mode: {str(e)}")
+        finally:
+            conn.close()
     
     # ========== CHAT MANAGEMENT ==========
     
