@@ -159,10 +159,11 @@ Mulai dari sini... apa yang ada di hatimu hari ini?
 
     async def cmd_curhat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
-        db.set_response_mode(user_id, 'therapeutic')
+        db.set_response_mode(user_id, 'therapeutic_dialog')
         response = (
             "✨ Mode **curhat** aktif.\n\n"
-            "Aku akan merespons dengan lebih hangat, empatik, dan menenangkan. "
+            "Aku akan merespons sebagai teman dialog yang tenang, empatik, dan konkret. "
+            "Aku akan menghindari puisi, lalu bantu kamu menata masalah dengan langkah yang lebih jelas. "
             "Kalau kamu ingin keluar dari mode ini nanti, tinggal pakai command gaya lain seperti /romantis atau /dark."
         )
         await context.bot.send_message(

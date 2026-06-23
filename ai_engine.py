@@ -214,6 +214,13 @@ ATURAN UMUM:
   - Jawab singkat, sangat hangat, dan fokus pada keselamatan
   - Ajak user menghubungi orang tepercaya atau layanan darurat setempat sekarang juga
   - Jangan meninggalkan user sendirian dengan perasaan itu
+        - Jika MODE RESPON = therapeutic_dialog:
+  - Jangan buat puisi, jangan metafora puitis, jangan terdengar seperti kutipan
+  - Fokus pada dialog yang hangat, logis, dan konkret
+  - Mulai dengan validasi perasaan, lalu rangkum masalahnya dengan bahasa sederhana
+  - Beri 1-3 saran kecil yang bisa dilakukan sekarang
+  - Kalau perlu, ajukan 1 pertanyaan lanjutan yang spesifik
+  - Nada harus tenang, sabar, manusiawi, dan menyentuh hati
 - Jika MODE RESPON = therapeutic:
   - Prioritaskan validasi perasaan, ketenangan, dan pendampingan yang jelas
   - Gunakan nada seperti pendengar yang sangat sabar dan profesional
@@ -359,15 +366,15 @@ Hanya puisi, tanpa penjelasan."""
 
     def _get_fallback_response(self, user_message: str, style: str, recent_responses: Optional[List[str]] = None, response_mode: Optional[str] = None) -> str:
         """Get fallback response when AI unavailable."""
-        therapeutic_templates = [
-            "Aku nangkap ini cukup berat buat kamu. Kita bisa pelan-pelan lihat apa yang paling menekan, satu bagian dulu saja.",
-            "Yang kamu rasakan itu valid. Aku akan dengarkan tanpa menghakimi, lalu bantu kamu menata isi kepala dengan tenang.",
-            "Kedengarannya kamu lagi kelelahan secara emosional. Coba tarik napas sebentar, lalu ceritakan bagian yang paling sulit.",
-            "Aku di sini bersama kamu. Kita tidak perlu menyelesaikan semuanya sekarang, cukup mulai dari yang paling mengganggu dulu."
+        dialog_templates = [
+            "Aku nangkap ini cukup berat buat kamu. Dari yang kamu ceritakan, sepertinya ada bagian yang paling menekan. Kita fokus ke bagian itu dulu ya, pelan-pelan.",
+            "Yang kamu rasakan itu valid. Kita tidak perlu menyelesaikan semuanya sekarang. Langkah pertama yang paling masuk akal adalah menenangkan tubuh dulu, lalu merapikan satu masalah kecil.",
+            "Kedengarannya kamu sudah menahan banyak hal. Coba jawab ini: apa yang paling bikin kamu sesak hari ini, dan apa yang paling kamu butuhkan malam ini?",
+            "Aku akan bantu kamu berpikir jernih. Untuk sekarang, coba pisahkan tiga hal: yang bisa kamu kendalikan, yang belum bisa, dan yang perlu kamu istirahatkan sebentar."
         ]
 
-        if response_mode == "therapeutic" or self._looks_like_support_request(user_message):
-            return random.choice(therapeutic_templates)
+        if response_mode in {"therapeutic", "therapeutic_dialog"} or self._looks_like_support_request(user_message):
+            return random.choice(dialog_templates if response_mode == "therapeutic_dialog" else dialog_templates)
 
         poems = self.fallback_poems.get(style, self.fallback_poems['default'])
         if recent_responses:
@@ -380,11 +387,11 @@ Hanya puisi, tanpa penjelasan."""
                 poems = filtered
 
         if response_mode == "conversational" and random.random() < 0.45:
-            return random.choice(therapeutic_templates)
+            return random.choice(dialog_templates)
         if response_mode == "poetic":
             return random.choice(poems)
         if random.random() < 0.25:
-            return random.choice(therapeutic_templates)
+            return random.choice(dialog_templates)
         return random.choice(poems)
 
     def _get_random_fallback_poem(self, recent_responses: Optional[List[str]] = None) -> str:
@@ -541,6 +548,9 @@ untuk memahami apa yang tak selesai dijelaskan.""",
         """Classify the most helpful response style for the current message."""
         if self._looks_like_high_risk(user_message):
             return "crisis"
+
+        if style == "curhat":
+            return "therapeutic_dialog"
 
         if self._looks_like_support_request(user_message):
             return "therapeutic"
